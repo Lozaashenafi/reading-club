@@ -1,0 +1,115 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+model User {
+  id        String   @id @default(uuid())
+  username  String
+  email     String   @unique
+  avatarUrl String?
+  createdAt DateTime @default(now())
+
+  clubs       Club[]        @relation("ClubOwner")
+  memberships ClubMember[]
+  posts       Post[]
+  readingTimeline ReadingTimeline[]
+}
+
+model Book {
+  id        String   @id @default(uuid())
+  title     String
+  author    String?
+  coverUrl  String?
+  pdfUrl    String
+  createdAt DateTime @default(now())
+
+  clubs Club[]
+}
+
+model Club {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  startDate   DateTime
+  endDate     DateTime
+  isArchived  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  bookId  String
+  ownerId String
+
+  book     Book @relation(fields: [bookId], references: [id])
+  owner    User @relation("ClubOwner", fields: [ownerId], references: [id])
+  members  ClubMember[]
+  readingTimeline ReadingTimeline[]
+  chapters Chapter[]
+  posts    Post[]
+}
+
+model ClubMember {
+  id       String   @id @default(uuid())
+  clubId   String
+  userId   String
+  role     String   // admin, moderator, member
+  joinedAt DateTime @default(now())
+
+  club Club @relation(fields: [clubId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([clubId, userId])
+}
+
+model Chapter {
+  id            String  @id @default(uuid())
+  clubId        String
+  title         String?
+  chapterNumber Int
+  startPage     Int
+  endPage       Int
+
+  club Club @relation(fields: [clubId], references: [id])
+}
+
+model ReadingTimeline {
+  id        String   @id @default(uuid())
+  clubId    String
+  userId    String
+  startDate DateTime
+  endDate   DateTime
+
+  club Club @relation(fields: [clubId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([clubId, userId])
+}
+
+model ReadingProgress {
+  id        String   @id @default(uuid())
+  userId    String
+  clubId    String
+  chapterId String
+  status    String
+  updatedAt DateTime @updatedAt
+}
+
+model Post {
+  id        String   @id @default(uuid())
+  userId    String
+  clubId    String?
+  content   String
+  postType  String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  club Club? @relation(fields: [clubId], references: [id])
+}
