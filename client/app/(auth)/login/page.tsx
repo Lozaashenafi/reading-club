@@ -1,7 +1,12 @@
+import AuthPage from "@/components/home/AuthPage";
 import React from "react";
 
 function page() {
-  return <div>page</div>;
+  return (
+    <>
+      <AuthPage type="sign-in" />
+    </>
+  );
 }
 
 export default page;
