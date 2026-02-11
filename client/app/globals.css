@@ -1,6 +1,7 @@
 @import "tailwindcss";
 /* @custom-variant dark (&:where(.dark, .dark *));
 @plugin "@tailwindcss/typography"; */
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
   --bg: 255 255 255;
@@ -20,17 +21,15 @@
 
   --color-primary: #9e6752;
   --color-secondary: #fed7a5;
-  --color-dark-primary: #1a3f22;
-  --color-dark-secondary: #230b0e;
-  --color-dark-tertiary: #351015;
-  --color-tertiary: #c05e6b;
-  --color-light: #e7c3c8;
-  --color-soft-white: #f7ebed;
+  --color-tertiary: #1a3f22;
+  --color-green-dark: #030603;
+  --color-green-light: #bac5bd;
+  --color-green-dark2: #08130a;
+  --color-dark-primary: #100a08;
+  --color-dark-secondary: #201510;
+  --color-dark-tertiary: #2f1f19;
+  --color-dark-forth: #3f2921;
+  --color-light: #e2d1cb;
+  --color-soft-white: #f5f0ee;
   --color-border-light: #e5e7eb;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }

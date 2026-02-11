@@ -1,32 +1,69 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Menu, X, Search, BookOpen } from "lucide-react";
+import { Menu, X, Search, BookOpen, Sun, Moon } from "lucide-react"; // Added Sun, Moon
 import Link from "next/link";
-import { usePathname } from "next/navigation"; // Added for active state
+import { usePathname } from "next/navigation";
+import { useTheme } from "next-themes"; // Added useTheme
 
-const PageTurnHeader = () => {
+const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const pathname = usePathname(); // Get current route
+  const pathname = usePathname();
+
+  // Change 'theme' to 'resolvedTheme'
+  const { resolvedTheme, setTheme } = useTheme();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Helper to check if link is active
-  const isActive = (path: string) => pathname === path;
+  if (!mounted) return null;
 
-  // Helper to close mobile menu
+  // Helper to toggle
+  const toggleTheme = () => {
+    setTheme(resolvedTheme === "dark" ? "light" : "dark");
+  };
+
+  const isActive = (path: string) => pathname === path;
   const closeMenu = () => setIsOpen(false);
 
-  if (!mounted) return null;
+  const NavLink = ({
+    href,
+    children,
+  }: {
+    href: string;
+    children: React.ReactNode;
+  }) => {
+    const active = isActive(href);
+    return (
+      <Link
+        href={href}
+        className={`relative group px-1 py-1 transition-all duration-300 ${
+          active
+            ? "text-primary dark:text-[#d4a373]"
+            : "text-[#7a7a7a] hover:text-primary dark:text-gray-400 dark:hover:text-[#d4a373]"
+        }`}
+      >
+        <span className="relative z-10 font-medium">{children}</span>
+
+        {active ? (
+          <>
+            <span className="absolute bottom-0 left-0 w-full h-[3px] bg-primary dark:bg-[#d4a373] rounded-full animate-in fade-in zoom-in duration-500" />
+            <span className="absolute -top-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary dark:bg-[#d4a373] rounded-full" />
+          </>
+        ) : (
+          <span className="absolute bottom-0 left-0 w-0 h-[2px] bg-primary/30 dark:bg-[#d4a373]/30 transition-all duration-300 group-hover:w-full" />
+        )}
+      </Link>
+    );
+  };
 
   return (
     <header className="fixed top-6 left-0 right-0 z-50 px-6">
       <div className="max-w-6xl mx-auto relative">
-        {/* Decorative Tree Branch with Leaf */}
-        <div className="absolute -top-2 left-36 z-20 pointer-events-none select-none">
+        {/* Decorative Tree Branch */}
+        <div className="absolute -top-2 left-36 z-20 pointer-events-none select-none opacity-100 dark:opacity-80">
           <svg
             width="160"
             height="120"
@@ -72,72 +109,63 @@ const PageTurnHeader = () => {
           </svg>
         </div>
 
-        {/* Main Navigation Bar */}
-        <nav className="bg-[#fdf8f1] border border-[#9e6752]/20 rounded-md px-6 py-3 shadow-sm flex items-center justify-between">
+        <nav className="bg-[#fdf8f1] dark:bg-[#1a1a1a] border border-primary/20 dark:border-white/10 rounded-xl px-6 py-3 shadow-md flex items-center justify-between backdrop-blur-sm bg-opacity-95 dark:bg-opacity-90">
           {/* Logo Section */}
           <Link
             href="/"
             className="flex items-center space-x-3 hover:opacity-90 transition-opacity"
           >
-            <div className="bg-[#9e6752] p-2 rounded-sm">
-              <BookOpen className="text-[#fdf8f1]" size={20} />
+            <div className="bg-primary dark:bg-[#d4a373] p-2 rounded-lg rotate-3 shadow-sm group-hover:rotate-0 transition-transform">
+              <BookOpen
+                className="text-[#fdf8f1] dark:text-[#1a1a1a]"
+                size={20}
+              />
             </div>
-            <span className="text-2xl font-serif font-bold text-[#2d2d2d] tracking-tight">
+            <span className="text-2xl font-serif font-bold text-[#2d2d2d] dark:text-gray-100 tracking-tight">
               BookPulse
             </span>
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-12">
-            <Link
-              href="/"
-              className={`${
-                isActive("/") ? "text-[#9e6752]" : "text-[#7a7a7a]"
-              } hover:text-[#9e6752] font-medium transition-colors`}
-            >
-              Home
-            </Link>
-            <Link
-              href="/explore"
-              className={`${
-                isActive("/explore") ? "text-[#9e6752]" : "text-[#7a7a7a]"
-              } hover:text-[#9e6752] font-medium transition-colors`}
-            >
-              Explore
-            </Link>
-            <Link
-              href="/my-clubs"
-              className={`bg-[#fed7a5] text-[#9e6752] px-6 py-2 rounded-sm border-b-2 ${
-                isActive("/my-clubs")
-                  ? "border-[#9e6752]"
-                  : "border-transparent"
-              } hover:border-[#9e6752] font-medium transition-all`}
-            >
-              My Clubs
-            </Link>
+          <div className="hidden md:flex items-center space-x-10">
+            <NavLink href="/">Home</NavLink>
+            <NavLink href="/explore">Explore</NavLink>
+            <NavLink href="/my-clubs">My Clubs</NavLink>
           </div>
 
           {/* Right Actions */}
-          <div className="flex items-center space-x-6">
-            <button className="text-[#7a7a7a] hover:text-[#9e6752]">
-              <Search size={20} />
+          <div className="flex items-center space-x-4">
+            {/* THEME TOGGLE BUTTON */}
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-lg text-primary dark:text-[#d4a373] hover:bg-secondary/30 dark:hover:bg-white/5 transition-all outline-none"
+              aria-label="Toggle Theme"
+            >
+              {resolvedTheme === "dark" ? (
+                <Sun size={20} />
+              ) : (
+                <Moon size={20} />
+              )}
             </button>
-            <Link
-              href="/login"
-              className="hidden sm:block bg-[#fed7a5] text-[#9e6752] px-5 py-2 rounded-sm font-bold text-sm shadow-sm hover:brightness-95 transition-all"
-            >
-              Sign In
-            </Link>
-            <Link
-              href="/get-started"
-              className="hidden sm:block bg-[#9e6752] text-white px-5 py-2 rounded-sm font-bold text-sm shadow-sm hover:bg-[#8a5a48] transition-all"
-            >
-              Get Started
-            </Link>
+
+            <div className="hidden sm:flex items-center space-x-3 ml-2">
+              <Link
+                href="/login"
+                className="text-primary dark:text-[#d4a373] px-4 py-2 rounded-lg font-bold text-sm hover:bg-secondary/30 dark:hover:bg-white/5 transition-all"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/register"
+                className="bg-primary dark:bg-[#d4a373] text-white dark:text-[#1a1a1a] px-5 py-2 rounded-lg font-bold text-sm shadow-md hover:bg-[#8a5a48] dark:hover:bg-[#e9c46a] hover:-translate-y-0.5 transition-all"
+              >
+                Get Started
+              </Link>
+            </div>
 
             {/* Mobile Menu Button */}
             <button
-              className="md:hidden text-[#9e6752]"
+              className="md:hidden text-primary dark:text-[#d4a373] p-2"
               onClick={() => setIsOpen(!isOpen)}
             >
               {isOpen ? <X size={24} /> : <Menu size={24} />}
@@ -147,40 +175,51 @@ const PageTurnHeader = () => {
 
         {/* Mobile Dropdown */}
         {isOpen && (
-          <div className="absolute top-full mt-2 left-0 right-0 bg-[#fdf8f1] border border-[#9e6752]/20 rounded-md p-4 flex flex-col space-y-4 shadow-xl md:hidden">
-            <Link
-              href="/"
-              onClick={closeMenu}
-              className={`${isActive("/") ? "text-[#9e6752]" : "text-[#7a7a7a]"} font-medium text-center`}
+          <div className="absolute top-full mt-3 left-0 right-0 bg-[#fdf8f1] dark:bg-[#262626] border border-primary/20 dark:border-white/10 rounded-xl p-6 flex flex-col space-y-4 shadow-2xl md:hidden animate-in slide-in-from-top-2 duration-300">
+            {["/", "/explore", "/my-clubs"].map((path) => (
+              <Link
+                key={path}
+                href={path}
+                onClick={closeMenu}
+                className={`text-lg font-medium px-4 py-2 rounded-lg transition-all ${
+                  isActive(path)
+                    ? "bg-secondary dark:bg-[#d4a373] text-primary dark:text-[#1a1a1a] border-l-4 border-primary dark:border-white/20"
+                    : "text-[#7a7a7a] dark:text-gray-400"
+                }`}
+              >
+                {path === "/"
+                  ? "Home"
+                  : path.replace("/", "").replace("-", " ")}
+              </Link>
+            ))}
+            <hr className="border-primary/10 dark:border-white/5" />
+
+            {/* Mobile Theme Toggle */}
+            <button
+              onClick={toggleTheme}
+              className="flex items-center justify-between px-4 py-2 text-primary dark:text-[#d4a373] font-medium"
             >
-              Home
-            </Link>
-            <Link
-              href="/explore"
-              onClick={closeMenu}
-              className={`${isActive("/explore") ? "text-[#9e6752]" : "text-[#7a7a7a]"} font-medium text-center`}
-            >
-              Explore
-            </Link>
-            <Link
-              href="/my-clubs"
-              onClick={closeMenu}
-              className={`${isActive("/my-clubs") ? "bg-[#fed7a5]" : ""} text-[#9e6752] font-bold text-center py-2 rounded-sm`}
-            >
-              My Clubs
-            </Link>
-            <hr className="border-[#9e6752]/10" />
+              <span>
+                Switch to {resolvedTheme === "dark" ? "Light" : "Dark"} Mode
+              </span>
+              {resolvedTheme === "dark" ? (
+                <Sun size={20} />
+              ) : (
+                <Moon size={20} />
+              )}
+            </button>
+
             <Link
               href="/login"
               onClick={closeMenu}
-              className="text-[#9e6752] font-bold text-center"
+              className="text-primary dark:text-[#d4a373] font-bold text-center py-2"
             >
               Sign In
             </Link>
             <Link
               href="/get-started"
               onClick={closeMenu}
-              className="bg-[#9e6752] text-white px-5 py-2 rounded-sm font-bold text-center"
+              className="bg-primary dark:bg-[#d4a373] text-white dark:text-[#1a1a1a] py-3 rounded-lg font-bold text-center shadow-lg"
             >
               Get Started
             </Link>
@@ -191,4 +230,4 @@ const PageTurnHeader = () => {
   );
 };
 
-export default PageTurnHeader;
+export default Header;

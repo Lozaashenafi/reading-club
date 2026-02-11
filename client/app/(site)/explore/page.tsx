@@ -1,10 +1,10 @@
-import AuthPage from "@/components/home/AuthPage";
+import ExplorePage from "@/components/explore/ExplorePage";
 import React from "react";
 
 function page() {
   return (
     <>
-      <AuthPage type="sign-up" />
+      <ExplorePage />
     </>
   );
 }
