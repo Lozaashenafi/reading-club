@@ -8,30 +8,144 @@ generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
 }
-
+enum PostType {
+  CLUB_ANNOUNCEMENT
+  MEMBER_POST
+  CHAPTER_UPDATE
+  GENERAL
+}
+enum NotificationType {
+  NEW_MEMBER
+  NEW_POST
+  READING_REMINDER
+  CLUB_INVITE
+  ANNOUNCEMENT
+}
+enum ReadingStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+enum ChatRoomType {
+  GENERAL
+  SPOILER
+  CHAPTER
+}
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  RESOLVED
+  REJECTED
+}
+enum ClubRole {
+  OWNER
+  ADMIN
+  MODERATOR
+  MEMBER
+}
+enum ClubVisibility {
+  PUBLIC
+  PRIVATE
+}
 datasource db {
   provider = "postgresql"
 }
 model User {
-  id        String   @id @default(uuid())
-  username  String
-  email     String   @unique
-  avatarUrl String?
-  createdAt DateTime @default(now())
+  id              String   @id @default(uuid())
+  username        String
+  email           String   @unique
+  password        String
+  avatarUrl       String?
+  isEmailVerified Boolean  @default(false)
+  emailVerifiedAt DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  clubs       Club[]        @relation("ClubOwner")
-  memberships ClubMember[]
-  posts       Post[]
-  readingTimeline ReadingTimeline[]
+  clubs            Club[]          @relation("ClubOwner")
+  memberships      ClubMember[]
+  posts            Post[]
+  readingTimeline  ReadingTimeline[]
+  notifications    Notification[]
+  notificationSetting NotificationSetting?
+  emailVerificationToken EmailVerificationToken[]
+  clubInvite ClubInvite[]
+  readingProgress ReadingProgress[]
+  messages  ChatMessage[]
+  reportsMade      ClubReport[] @relation("Reporter")
+  reportsReceived  ClubReport[] @relation("ReportedUser")
+
 }
-
-model Book {
+model ReadingProgress {
   id        String   @id @default(uuid())
+  userId    String
+  clubId    String
+  chapterId String?      // optional if whole-book mode
+  currentPage Int?       // optional page-level progress
+  status    ReadingStatus @default(NOT_STARTED) // NOT_STARTED, IN_PROGRESS, COMPLETED
+  updatedAt DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  club    Club    @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  chapter Chapter? @relation(fields: [chapterId], references: [id])
+
+  @@unique([userId, chapterId])
+  @@index([clubId])
+  @@index([userId])
+}
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      NotificationType
   title     String
-  author    String?
-  coverUrl  String?
-  pdfUrl    String
+  message   String
+  metadata  Json?
+  isRead    Boolean  @default(false)
+  emailSent Boolean  @default(false)
   createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+model NotificationSetting {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+
+  // Global switches
+  inAppEnabled  Boolean @default(true)
+  emailEnabled  Boolean @default(true)
+
+  // Per type email control
+  newMemberEmail       Boolean @default(true)
+  newPostEmail         Boolean @default(true)
+  readingReminderEmail Boolean @default(true)
+  announcementEmail    Boolean @default(true)
+  clubInviteEmail      Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+model EmailVerificationToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+model Book {
+  id          String   @id @default(uuid())
+  title       String
+  author      String?
+  description String?   // optional book description
+  coverUrl    String?
+  totalPages  Int?  
+  pdfUrl      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   clubs Club[]
 }
@@ -42,33 +156,81 @@ model Club {
   description String?
   startDate   DateTime
   endDate     DateTime
-  isArchived  Boolean  @default(false)
-  createdAt   DateTime @default(now())
 
+  visibility  ClubVisibility @default(PUBLIC)
+
+  isArchived  Boolean  @default(false)
+  isActive    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  defaultStartDate DateTime
+  defaultEndDate   DateTime
   bookId  String
   ownerId String
 
   book     Book @relation(fields: [bookId], references: [id])
-  owner    User @relation("ClubOwner", fields: [ownerId], references: [id])
+  owner    User @relation("ClubOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   members  ClubMember[]
   readingTimeline ReadingTimeline[]
   chapters Chapter[]
   posts    Post[]
+  clubInvite ClubInvite[]
+  clubReport ClubReport[]
+  chatRoom ChatRoom[]
+  readingProgress ReadingProgress[]
+
+  @@index([visibility])
 }
+model ClubInvite {
+  id        String   @id @default(uuid())
+  clubId    String
+  token     String   @unique
+  expiresAt DateTime?
+  maxUses   Int?
+  uses      Int      @default(0)
+  createdAt DateTime @default(now())
+  createdBy String
 
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  inviter User @relation(fields: [createdBy], references: [id])
+}
 model ClubMember {
-  id       String   @id @default(uuid())
-  clubId   String
-  userId   String
-  role     String   // admin, moderator, member
-  joinedAt DateTime @default(now())
+  id        String   @id @default(uuid())
+  clubId    String
+  userId    String
+  role      ClubRole @default(MEMBER)
 
-  club Club @relation(fields: [clubId], references: [id])
-  user User @relation(fields: [userId], references: [id])
+  isSuspended Boolean @default(false)
+  suspendedUntil DateTime?
+
+  joinedAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([clubId, userId])
+  @@index([clubId])
+  @@index([userId])
 }
+model ClubReport {
+  id          String   @id @default(uuid())
+  clubId      String
+  reporterId  String
+  reportedId  String
+  reason      String
+  status      ReportStatus @default(PENDING)
+  createdAt   DateTime @default(now())
+  resolvedAt  DateTime?
 
+  club     Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  reporter User @relation("Reporter", fields: [reporterId], references: [id])
+  reported User @relation("ReportedUser", fields: [reportedId], references: [id])
+
+  @@index([clubId])
+  @@index([reportedId])
+}
 model Chapter {
   id            String  @id @default(uuid())
   clubId        String
@@ -78,6 +240,37 @@ model Chapter {
   endPage       Int
 
   club Club @relation(fields: [clubId], references: [id])
+  chatRoom ChatRoom[]
+  readingProgress ReadingProgress[]
+
+}
+model ChatRoom {
+  id        String   @id @default(uuid())
+  clubId    String
+  chapterId String?      // null = General or Spoiler
+  type      ChatRoomType // GENERAL, SPOILER, CHAPTER
+  title     String
+  createdAt DateTime @default(now())
+
+  club      Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  chapter   Chapter? @relation(fields: [chapterId], references: [id])
+  messages  ChatMessage[]
+
+  @@index([clubId])
+  @@index([chapterId])
+}
+model ChatMessage {
+  id        String   @id @default(uuid())
+  roomId    String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+
+  room  ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user  User @relation(fields: [userId], references: [id])
+
+  @@index([roomId])
+  @@index([userId])
 }
 
 model ReadingTimeline {
@@ -93,23 +286,18 @@ model ReadingTimeline {
   @@unique([clubId, userId])
 }
 
-model ReadingProgress {
-  id        String   @id @default(uuid())
-  userId    String
-  clubId    String
-  chapterId String
-  status    String
-  updatedAt DateTime @updatedAt
-}
-
 model Post {
   id        String   @id @default(uuid())
   userId    String
-  clubId    String?
+  clubId    String?       // null if general post
   content   String
-  postType  String
+  postType  PostType
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id])
-  club Club? @relation(fields: [clubId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  club Club? @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([clubId])
 }
