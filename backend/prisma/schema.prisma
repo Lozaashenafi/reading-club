@@ -7,7 +7,11 @@
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
+  moduleFormat = "cjs" 
 }
+
+
+
 enum PostType {
   CLUB_ANNOUNCEMENT
   MEMBER_POST
@@ -60,7 +64,8 @@ model User {
   emailVerifiedAt DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-
+  otpCode         String?  // Store the 6-digit code
+  otpExpires      DateTime? // Set an expiration time (e
   clubs            Club[]          @relation("ClubOwner")
   memberships      ClubMember[]
   posts            Post[]
